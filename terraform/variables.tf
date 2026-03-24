@@ -1,7 +1,10 @@
 variable "project_id" {
-  default = "terraform-demo-484209"
+  description = "GCP project ID"
+  type        = string
 }
 
 variable "region" {
-  default = "us-central1"
+  description = "GCP region"
+  type        = string
+  default     = "us-central1"
 }

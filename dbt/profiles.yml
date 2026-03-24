@@ -1,0 +1,14 @@
+stock_market_analytics:
+  outputs:
+    dev:
+      dataset: mart_stock_data
+      job_execution_timeout_seconds: 300
+      job_retries: 1
+      keyfile: /opt/airflow/credentials/service-account-key.json
+      location: us-central1
+      method: service-account
+      priority: interactive
+      project: terraform-demo-484209
+      threads: 4
+      type: bigquery
+  target: dev

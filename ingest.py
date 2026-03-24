@@ -5,6 +5,11 @@ import yfinance as yf
 from google.cloud import storage
 from datetime import date, timedelta
 import sys
+import os
+from pandas.tseries.holiday import USFederalHolidayCalendar
+from pandas.tseries.offsets import CustomBusinessDay
+BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME")
+US_BD = CustomBusinessDay(calendar=USFederalHolidayCalendar())
 
 # ------------------- EXTRACT S&P 500 SYMBOLS ---------------------------
 def get_sp500_tickers():
@@ -17,8 +22,22 @@ def get_sp500_tickers():
     table['Symbol'] = table['Symbol'].str.replace('.', '-', regex=False)
     return table[['Symbol', 'Security', 'GICS Sector', 'GICS Sub-Industry']]
 
+
+
+def is_trading_day(target_date):
+    # Generate the range of US business days around the target date
+    bday_range = pd.bdate_range(
+        start=target_date, 
+        end=target_date, 
+        freq=US_BD
+    )
+    return len(bday_range) > 0
+
 # ------------------- FETCH STOCK PRICES FOR A SINGLE DAY ---------------
 def fetch_stock_data(symbols, target_date):
+    if not is_trading_day(target_date):
+        print(f"  {target_date} is a weekend or US holiday, skipping.")
+        return None
     # yfinance end date is exclusive, so add 1 day
     next_day = (target_date + timedelta(days=1)).strftime("%Y-%m-%d")
     target_date_str = target_date.strftime("%Y-%m-%d")
@@ -58,7 +77,6 @@ def upload_to_gcs(df, bucket_name, blob_name):
 
 # ------------------- MAIN ----------------------------------------------
 if __name__ == "__main__":
-    BUCKET_NAME = "terraform-demo-484209-data-lake"
 
     # Accept a date argument for backfilling, default to yesterday
     if len(sys.argv) > 1:
