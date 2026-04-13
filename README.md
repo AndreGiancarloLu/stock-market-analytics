@@ -205,7 +205,7 @@ EOF
 
 Replace `your-project-id-data-lake` with your actual GCS bucket name (it follows the format `your-project-id-data-lake` based on what Terraform created).
 
-Initialize and start Airflow:
+Initialize and start Airflow (ensure Docker Desktop is running):
 
 ```bash
 docker compose up airflow-init
