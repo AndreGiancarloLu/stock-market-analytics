@@ -8,6 +8,8 @@ import sys
 import os
 from pandas.tseries.holiday import USFederalHolidayCalendar
 from pandas.tseries.offsets import CustomBusinessDay
+import time
+from yfinance.exceptions import YFRateLimitError
 BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME")
 US_BD = CustomBusinessDay(calendar=USFederalHolidayCalendar())
 
@@ -35,29 +37,51 @@ def is_trading_day(target_date):
 
 # ------------------- FETCH STOCK PRICES FOR A SINGLE DAY ---------------
 def fetch_stock_data(symbols, target_date):
-    if not is_trading_day(target_date):
-        print(f"  {target_date} is a weekend or US holiday, skipping.")
-        return None
-    # yfinance end date is exclusive, so add 1 day
-    next_day = (target_date + timedelta(days=1)).strftime("%Y-%m-%d")
     target_date_str = target_date.strftime("%Y-%m-%d")
+    next_day = (target_date + timedelta(days=1)).strftime("%Y-%m-%d")
 
+    print(f"Downloading all tickers for {target_date_str}...")
+
+    for attempt in range(3):  # retry up to 3 times
+        try:
+            data = yf.download(
+                tickers=symbols,
+                start=target_date_str,
+                end=next_day,
+                group_by='ticker',
+                auto_adjust=True,
+                progress=False
+            )
+            break
+        except YFRateLimitError:
+            wait = (attempt + 1) * 60  # wait 60s, 120s, 180s
+            print(f"Rate limited. Waiting {wait} seconds before retry...")
+            time.sleep(wait)
+    else:
+        print(f"Failed after 3 attempts for {target_date_str}, skipping.")
+        return None
+
+    if data.empty:
+        print(f"No data for {target_date_str} — likely a weekend or holiday.")
+        return None
+
+    # Reshape from wide format to long format
     all_data = []
     for symbol in symbols:
-        print(f"Fetching {symbol} for {target_date_str}...")
-        hist = yf.Ticker(symbol).history(start=target_date_str, end=next_day)
-        if hist.empty:
-            print(f"  Skipping {symbol} no data")
+        try:
+            ticker_data = data[symbol].dropna()
+            if ticker_data.empty:
+                continue
+            ticker_data = ticker_data.reset_index()
+            ticker_data["symbol"] = symbol
+            ticker_data = ticker_data[["symbol", "Date", "Open", "Close", "High", "Low", "Volume"]]
+            ticker_data.columns = ["symbol", "date", "open", "close", "high", "low", "volume"]
+            ticker_data["date"] = ticker_data["date"].dt.date
+            all_data.append(ticker_data)
+        except KeyError:
             continue
-        hist = hist.reset_index()
-        hist["symbol"] = symbol
-        hist = hist[["symbol", "Date", "Open", "Close", "High", "Low", "Volume"]]
-        hist.columns = ["symbol", "date", "open", "close", "high", "low", "volume"]
-        hist["date"] = hist["date"].dt.date
-        all_data.append(hist)
 
     if not all_data:
-        print(f"No data for {target_date_str}, skipping.")
         return None
 
     return pd.concat(all_data, ignore_index=True)

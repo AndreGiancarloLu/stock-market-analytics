@@ -49,8 +49,8 @@ x-airflow-common:
   # In order to add custom dependencies or upgrade provider packages you can use your extended image.
   # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
   # and uncomment the "build" line below, Then run `docker-compose build` to build the images.
-  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.9.1}
-  # build: .
+  # image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.9.1}
+  build: .
   environment:
     &airflow-common-env
     GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/credentials/service-account-key.json
@@ -154,12 +154,12 @@ services:
 
   airflow-worker:
     <<: *airflow-common
-    command: celery worker
+    command: celery worker -H airflow-worker@%h
     healthcheck:
       # yamllint disable rule:line-length
       test:
         - "CMD-SHELL"
-        - 'celery --app airflow.providers.celery.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}" || celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"'
+        - 'celery --app airflow.providers.celery.executors.celery_executor.app inspect ping -d "airflow-worker@$${HOSTNAME}" || celery --app airflow.executors.celery_executor.app inspect ping -d "airflow-worker@$${HOSTNAME}"'
       interval: 30s
       timeout: 10s
       retries: 5
@@ -169,6 +169,7 @@ services:
       # Required to handle warm shutdown of the celery workers properly
       # See https://airflow.apache.org/docs/docker-stack/entrypoint.html#signal-propagation
       DUMB_INIT_SETSID: "0"
+      AIRFLOW__CELERY__WORKER_HOSTNAME: "airflow-worker@%h"
     restart: always
     depends_on:
       <<: *airflow-common-depends-on

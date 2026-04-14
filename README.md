@@ -197,10 +197,11 @@ cat > .env << EOF
 AIRFLOW_UID=$(id -u)
 GOOGLE_APPLICATION_CREDENTIALS=/opt/airflow/credentials/service-account-key.json
 GCS_BUCKET_NAME=your-project-id-data-lake
+AIRFLOW__CELERY__WORKER_HOSTNAME=airflow-worker@%h
 EOF
 
 # Windows PowerShell
-[System.IO.File]::WriteAllText("$PWD\.env", "AIRFLOW_UID=50000`nGOOGLE_APPLICATION_CREDENTIALS=/opt/airflow/credentials/service-account-key.json`nGCS_BUCKET_NAME=your-project-id-data-lake`n", [System.Text.Encoding]::UTF8)
+[System.IO.File]::WriteAllText("$PWD\.env", "AIRFLOW_UID=50000`nGOOGLE_APPLICATION_CREDENTIALS=/opt/airflow/credentials/service-account-key.json`nGCS_BUCKET_NAME=your-project-id-data-lake`nAIRFLOW__CELERY__WORKER_HOSTNAME=airflow-worker@%h`n", [System.Text.Encoding]::UTF8)
 ```
 
 Replace `your-project-id-data-lake` with your actual GCS bucket name (it follows the format `your-project-id-data-lake` based on what Terraform created).
@@ -219,7 +220,7 @@ Open http://localhost:8080 and log in with username `airflow` and password `airf
 Once the DAG appears in the Airflow UI, trigger the backfill from the Airflow CLI:
 
 ```bash
-docker compose exec airflow-webserver airflow dags backfill \
+docker compose exec airflow-scheduler airflow dags backfill \
   stock_pipeline \
   --start-date 2025-01-01 \
   --end-date 2025-03-01

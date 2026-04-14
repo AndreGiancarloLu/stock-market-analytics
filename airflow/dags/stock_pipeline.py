@@ -5,7 +5,7 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.bash import BashOperator
 from datetime import datetime, timedelta
-from ingest import get_sp500_tickers, fetch_stock_data, upload_to_gcs
+from ingest import get_sp500_tickers, fetch_stock_data, upload_to_gcs, is_trading_day
 from load import load_tickers_to_bigquery, load_prices_to_bigquery
 from datetime import date
 
@@ -39,12 +39,28 @@ def ingest_task(**context):
 
 def load_task(**context):
     execution_date = context['logical_date'].date()
+    
+    if not is_trading_day(execution_date):
+        print(f"{execution_date} is not a trading day, skipping.")
+        return None
+
+    from google.cloud import storage
+    date_str = execution_date.strftime("%Y-%m-%d")
+    client = storage.Client()
+    bucket = client.bucket(BUCKET_NAME)
+    blob = bucket.blob(f"prices/date={date_str}/raw.parquet")
+    
+    if not blob.exists():
+        print(f"No data file found for {date_str} — market may have been closed. Skipping.")
+        return None
+
     load_tickers_to_bigquery(BUCKET_NAME, "raw_stock_data")
     load_prices_to_bigquery(BUCKET_NAME, "raw_stock_data", execution_date)
 
 with DAG(
     dag_id="stock_pipeline",
     default_args=default_args,
+    max_active_runs=1,
     description="Daily S&P 500 stock data pipeline",
     schedule_interval="0 18 * * 1-5",  # 6pm UTC Mon-Fri (after US market close)
     start_date=datetime(2025, 1, 1),
