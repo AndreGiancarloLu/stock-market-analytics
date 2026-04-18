@@ -29,7 +29,7 @@ All steps are orchestrated by Apache Airflow running in Docker.
 - Data Warehouse: BigQuery
 - Transformations: dbt (Data Build Tool)
 - Orchestration: Apache Airflow via Docker
-- Dashboard: Looker Studio
+- Dashboard:  Power BI
 
 ---
 
@@ -37,40 +37,58 @@ All steps are orchestrated by Apache Airflow running in Docker.
 
 ```
 stock-market-analytics/
-├── terraform/
-│   ├── main.tf
-│   ├── variables.tf
-│   ├── outputs.tf
-│   └── terraform.tfvars             # gitignored, create locally
-├── dbt/
-│   └── stock_market_analytics/
-│       ├── profiles.yml              # gitignored, created locally
-│       ├── models/
-│       │   ├── staging/
-│       │   │   ├── sources.yml
-│       │   │   ├── stg_stocks.sql
-│       │   │   └── stg_tickers.sql
-│       │   ├── intermediate/
-│       │   │   └── int_stocks_enriched.sql
-│       │   └── marts/
-│       │       ├── mart_sector_performance.sql
-│       │       └── mart_stock_volatility.sql
-│       ├── macros/
-│       │   └── get_daily_return.sql
-│       └── tests/
-│           ├── negative_test.sql
-│           ├── high_vs_low_test.sql
-│           ├── close_test.sql
-│           └── open_test.sql
 ├── airflow/
 │   ├── dags/
 │   │   └── stock_pipeline.py
+│   ├── plugins/
 │   ├── docker-compose.yaml
+│   ├── Dockerfile
+│   ├── requirements.txt
 │   └── .env                          # gitignored, created locally
 ├── credentials/
+│   ├── .gitkeep
 │   └── service-account-key.json      # gitignored, created locally
+├── data/
+│   ├── sector_performance.csv
+│   ├── volatility.csv
+│   └── stock-market-analytics.pbix
+├── dbt/
+│   └── stock_market_analytics/
+│       ├── macros/
+│       │   └── get_daily_return.sql
+│       ├── models/
+│       │   ├── intermediate/
+│       │   │   └── int_stocks_enriched.sql
+│       │   ├── marts/
+│       │   │   ├── mart_sector_performance.sql
+│       │   │   └── mart_stock_volatility.sql
+│       │   └── staging/
+│       │       ├── sources.yml
+│       │       ├── stg_stocks.sql
+│       │       └── stg_tickers.sql
+│       ├── tests/
+│       │   ├── close_test.sql
+│       │   ├── high_vs_low_test.sql
+│       │   ├── negative_test.sql
+│       │   └── open_test.sql
+│       ├── dbt_project.yml
+│       └── profiles.yml              # gitignored, created locally
+├── screenshots/
+│   ├── sector_performance.png
+│   └── sector_volatility.png
+├── terraform/
+│   ├── main.tf
+│   ├── outputs.tf
+│   ├── variables.tf
+│   └── terraform.tfvars              # gitignored, created locally
+├── .gitignore
+├── .python-version
+├── bulk_backfill.py
 ├── ingest.py
 ├── load.py
+├── main.py
+├── pyproject.toml
+├── uv.lock
 └── README.md
 ```
 
@@ -223,7 +241,7 @@ Once the DAG appears in the Airflow UI, trigger the backfill from the Airflow CL
 docker compose exec airflow-scheduler airflow dags backfill \
   stock_pipeline \
   --start-date 2025-01-01 \
-  --end-date 2025-03-01
+  --end-date 2025-12-01
 ```
 
 This runs the full pipeline (ingest -> GCS -> BigQuery -> dbt) for every trading day in the date range.
@@ -241,7 +259,7 @@ FROM `raw_stock_data.stock_prices`
 
 ### 10. View the dashboard
 
-Link to be added after publishing.
+[Link to PowerBI dashboard.](https://app.powerbi.com/view?r=eyJrIjoiOTA4NmQ4MDItZDQ4YS00ODIyLWEwM2ItZDQ4NTdhMmNjYTA2IiwidCI6ImYzNGEzNWJkLWE2NWQtNDYwNS1iMGZhLWQyNTcxZjgzMWY1ZSIsImMiOjEwfQ%3D%3D)
 
 ---
 
@@ -249,5 +267,6 @@ Link to be added after publishing.
 
 - The S&P 500 has 503 ticker symbols rather than 500 because some companies have multiple share classes (e.g. Alphabet has both GOOGL and GOOG). This is expected and all 503 are valid.
 - Weekends and market holidays return no data from yfinance. The pipeline handles this by skipping those dates.
+- Yahoo Finance rate limits bulk requests. If the backfill fails with a YFRateLimitError, wait a few hours before retrying — the block is temporary. The pipeline uses yf.download() to batch all tickers into a single request per day to minimize this risk.
 - The following files are gitignored and must be created locally by each user: `credentials/service-account-key.json`, `terraform/terraform.tfvars`, `airflow/.env`, and `dbt/stock_market_analytics/profiles.yml`.
 - The `GCS_BUCKET_NAME` environment variable must be set in `airflow/.env` before running the pipeline. The bucket name follows the format `your-project-id-data-lake` based on what Terraform creates.
