@@ -210,7 +210,6 @@ dbt debug
 
 Remember to change the keyfile path back to `/opt/airflow/credentials/service-account-key.json` 
 before running the Airflow pipeline, otherwise dbt will fail inside the container.
-```
 
 ### 7. Set up Airflow
 
