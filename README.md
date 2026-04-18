@@ -192,13 +192,24 @@ stock_market_analytics:
   target: dev
 ```
 
-Note: the keyfile path uses `/opt/airflow/` because this file is used by Airflow running inside Docker. If you want to run dbt locally as well, you can temporarily change the keyfile path to your local credentials path.
+Note: the keyfile path above uses `/opt/airflow/` which is the path inside the Docker container. 
+If you want to verify the dbt connection locally before running through Airflow, temporarily 
+change the keyfile path in `profiles.yml` to your local path first:
 
-Verify the local dbt connection:
+```yaml
+keyfile: C:/path/to/credentials/service-account-key.json  # Windows
+keyfile: /path/to/credentials/service-account-key.json    # Mac/Linux
+```
+
+Then run:
 
 ```bash
 cd dbt/stock_market_analytics
 dbt debug
+```
+
+Remember to change the keyfile path back to `/opt/airflow/credentials/service-account-key.json` 
+before running the Airflow pipeline, otherwise dbt will fail inside the container.
 ```
 
 ### 7. Set up Airflow
