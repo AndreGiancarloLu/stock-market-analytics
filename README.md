@@ -259,9 +259,13 @@ FROM `raw_stock_data.stock_prices`
 
 ### 10. View the dashboard
 
-[Link to PowerBI dashboard.](https://app.powerbi.com/view?r=eyJrIjoiOTA4NmQ4MDItZDQ4YS00ODIyLWEwM2ItZDQ4NTdhMmNjYTA2IiwidCI6ImYzNGEzNWJkLWE2NWQtNDYwNS1iMGZhLWQyNTcxZjgzMWY1ZSIsImMiOjEwfQ%3D%3D)
+The dashboard has two pages and is publicly accessible here: [link](https://app.powerbi.com/view?r=eyJrIjoiOTA4NmQ4MDItZDQ4YS00ODIyLWEwM2ItZDQ4NTdhMmNjYTA2IiwidCI6ImYzNGEzNWJkLWE2NWQtNDYwNS1iMGZhLWQyNTcxZjgzMWY1ZSIsImMiOjEwfQ%3D%3D)
 
----
+**Page 1 - Sector Performance Over Time**
+Shows the cumulative return (%) of each S&P 500 sector from January 2025 onwards. Cumulative return measures how much a sector has grown from the starting point, so a value of 10% means a $100 investment at the start would now be worth $110. Use the sector filter to compare specific sectors.
+
+**Page 2 - Monthly Return Volatility by Sector**
+Shows the average monthly volatility (standard deviation of daily returns) for each sector in 2025. Volatility measures how much prices fluctuate day to day, so a higher volatility means more unpredictable price swings and generally indicates higher risk. Information Technology is the most volatile sector while Real Estate is the most stable.
 
 ## Notes
 
